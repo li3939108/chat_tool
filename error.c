@@ -1,7 +1,11 @@
-#include	"unp.h"
-
+#include	"constants.h"
+#include	<errno.h>
 #include	<stdarg.h>		/* ANSI C header file */
 #include	<syslog.h>		/* for syslog() */
+#include	<strings.h>
+#include	<stdio.h>
+#include	<stdlib.h>
+#include	<string.h>
 
 int		daemon_proc;		/* set nonzero by daemon_init() */
 
