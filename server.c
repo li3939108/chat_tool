@@ -1,12 +1,19 @@
+#include "constants.h"
 #include <sys/types.h>	  
 #include <sys/socket.h>
 #include <strings.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netinet/ip.h> /* superset of previous */
+#include <stdlib.h>
+
 
 #define SERV_PORT 28376
 
 typedef struct sockaddr SA ;
 
-void main(int argc, char **argv){
+
+int main(int argc, char **argv){
 	int listenfd, connfd;
 	pid_t childpid;
 	socklen_t clilen;
@@ -27,12 +34,12 @@ void main(int argc, char **argv){
 		clilen = sizeof(cliaddr);
 		connfd = accept(listenfd, (SA *) &cliaddr, &clilen);
 
-		if ( (childpid = Fork()) == 0) {        /* child process */
-			Close(listenfd);        /* close listening socket */
+		if ( (childpid = fork()) == 0) {        /* child process */
+			close(listenfd);        /* close listening socket */
 			str_echo(connfd);       /* process the request */
 			exit(0);
 		}
-		Close(connfd);  /* parent closes connected socket */
+		close(connfd);  /* parent closes connected socket */
 	}
 
 
