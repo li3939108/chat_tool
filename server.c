@@ -1,5 +1,5 @@
-#include "constants.h"
 #include <sys/types.h>	  
+#include "commons.h"
 #include <sys/socket.h>
 #include <strings.h>
 #include <unistd.h>
@@ -8,9 +8,7 @@
 #include <stdlib.h>
 
 
-#define SERV_PORT 28376
-
-typedef struct sockaddr SA ;
+extern void str_echo(int sockfd) ;
 
 
 int main(int argc, char **argv){
