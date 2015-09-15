@@ -1,6 +1,4 @@
 #include "commons.h"
-#include <readline/readline.h>
-#include <readline/history.h>
 #include <stdio.h>
 
 extern void Writen(int fd, void *ptr, size_t nbytes);
