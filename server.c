@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <stdint.h>
 
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
@@ -22,13 +23,14 @@ int main(int argc, char **argv){
 	struct sockaddr_in cliaddr, servaddr;
 
 
+
 	if(argc == 4){
 		listenfd = socket(AF_INET, SOCK_STREAM, 0);
 		bzero(&servaddr, sizeof(servaddr));
 		servaddr.sin_family = AF_INET;
 		int return_value = inet_pton(servaddr.sin_family, argv[1], &servaddr.sin_addr), port ; 
 		if(return_value == 1){
-//			servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+			/*servaddr.sin_addr.s_addr = htonl(INADDR_ANY);*/
 		}else if(return_value == 0){ err_quit("Illegal IP address: %s", argv[1]) ;
 		}else{ err_quit("Unknow error : IP address") ; }
 		port = strtol (argv[2], NULL, 0)  ;
@@ -45,7 +47,7 @@ int main(int argc, char **argv){
 	listen(listenfd, LISTENQ);
 
 	maxfd = listenfd;			/* initialize */
-	maxi = -1;					/* index into client[] array */
+	maxi = -1;				/* index into client[] array */
 	for (i = 0; i < FD_SETSIZE; i++){
 		client[i] = -1;		
 	}	/* -1 indicates available entry */
