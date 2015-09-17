@@ -39,8 +39,8 @@ void str_cli(FILE *fp, int sockfd){
 			length = (int)  (header & 0x0000ffff);
 
 			int32_t attr = ntohl(int_buf[1] ) ;
-			int attr_type = (attr & 0xffff0000) >> 16 ,
-				attr_length = (attr & 0x0000ffff) ;
+			int first_attr_type = (attr & 0xffff0000) >> 16 ,
+				first_attr_length = (attr & 0x0000ffff) ;
 
 			switch(type){
 
@@ -49,8 +49,9 @@ void str_cli(FILE *fp, int sockfd){
 	
 			case HEADER_ACK:{
 
-			if(n >= 10 && attr_type == ATTR_CLIENT_COUNT){
-
+			if(n >= 10 && first_attr_type == ATTR_CLIENT_COUNT){
+				int16_t  client_count = ntohs(  *(int16_t *)(int_buf + 2) ) ;
+				fprintf(stdout, "client_count: %d\n",client_count);
 			}else{
 
 			}

@@ -17,6 +17,7 @@
 
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
+char buf[MAXLINE], wbuf[MAXLINE];
 
 
 int main(int argc, char **argv){
@@ -26,7 +27,6 @@ int main(int argc, char **argv){
 	fd_set rset, allset;
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
-	char buf[MAXLINE];
 	char response_buf[MAXLINE];
 	char client_username[FD_SETSIZE][1+SIZE_ATTR_USERNAME] ;
 
@@ -129,18 +129,18 @@ int main(int argc, char **argv){
 					type = (int)( (header & 0x007f0000) >> 16 ) ,
 					length = (int)  (header & 0x0000ffff);
 					int32_t attr = ntohl(int_buf[1] ) ;
-					int attr_type = (attr & 0xffff0000) >> 16 ,
-						attr_length = (attr & 0x0000ffff) ;
+					int first_attr_type = (attr & 0xffff0000) >> 16 ,
+						first_attr_length = (attr & 0x0000ffff) ;
 
 					switch(type ){
 
 					case HEADER_JOIN:{
 
-					if( n >= 9 &&  attr_type == ATTR_USERNAME ){
+					if( n >= 9 &&  first_attr_type == ATTR_USERNAME ){
 						if(client_status[i] <= 0) {
 							ENTRY et={NULL, NULL} , *e;
-							strncpy(client_username[i], (char *)(int_buf+2), attr_length) ;
-							client_username[i][attr_length] = '\0';
+							strncpy(client_username[i], (char *)(int_buf+2), first_attr_length) ;
+							client_username[i][first_attr_length] = '\0';
 							et.key = client_username[i] ;
 							if(NULL == hsearch(et, FIND) ){
 								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
@@ -172,8 +172,8 @@ int main(int argc, char **argv){
 					
 					case HEADER_SEND:{
 
-					if(n >= 9 && attr_type == ATTR_MESSAGE){
-						buf[8+attr_length] = '\0' ;
+					if(n >= 9 && first_attr_type == ATTR_MESSAGE){
+						buf[8+first_attr_length] = '\0' ;
 						fprintf(stdout, "Reved msg from client %d: %s", i, buf + 8) ;
 					}else{
 						close(sockfd);FD_CLR(sockfd, &allset);
@@ -202,10 +202,11 @@ int main(int argc, char **argv){
 	}
 }
 int msg_ACK(int fd, int maxi, int client_count, int requestor_index, char client_username[][16], int client_status[]){
-	int32_t head, attr_client_count = ATTRIBUTE(ATTR_CLIENT_COUNT, 2);
+	int32_t head, attr_client_count = htonl( ATTRIBUTE(ATTR_CLIENT_COUNT, 2)) ;
 	int32_t attrs_username[client_count] ;
 	char usernames[client_count][16] ;
-	int i, ct=0;
+	int i, ct=0, position ;
+	short network_client_count = htons( (short) client_count) ;
 	for(i =0 ;i <= maxi; i++){
 		if(ct == client_count){break;}
 		if(client_status[i] > 0 && i != requestor_index){
@@ -214,4 +215,17 @@ int msg_ACK(int fd, int maxi, int client_count, int requestor_index, char client
 			ct ++ ;
 		}
 	}
+	
+	memcpy(wbuf+4, &attr_client_count, 4) ;
+	memcpy(wbuf+8, &network_client_count, 2) ;
+	position = 10 ;
+	for(i = 0; i < ct;i++){
+		memcpy(wbuf+position, attrs_username+ct, 4);
+		position += 4; 
+		memcpy(wbuf+position, usernames[ct], strlen(usernames[ct] ) ) ;
+		position += strlen(usernames[ct] ) ;
+	}
+	head = htonl( HEADER( HEADER_ACK, position - 4) ) ;
+	memcpy(wbuf, &head, 4) ;
+	return send(fd, wbuf, position, 0) ;
 }
