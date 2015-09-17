@@ -2,7 +2,7 @@
 #define __COMMONS_H__
 
 #define SERV_PORT 9877
-#define MAXLINE 512
+#define MAXLINE 1024
 #define LISTENQ 1024
 
 #define VERSION 3

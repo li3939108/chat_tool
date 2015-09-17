@@ -115,7 +115,7 @@ int main(int argc, char **argv){
 			if ( (sockfd = client[i]) < 0){
 				continue;}
 			if (FD_ISSET(sockfd, &rset)) {
-				if ( (n = read(sockfd, buf, MAXLINE)) < 4) {
+				if ( (n = recv(sockfd, buf, MAXLINE, 0)) < 4) {
 					/*4connection closed by client */
 					/* client exits */
 					close(sockfd); FD_CLR(sockfd, &allset);
