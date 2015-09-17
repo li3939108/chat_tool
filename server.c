@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <search.h>
 
 #define NOTDEF
 
@@ -29,6 +30,7 @@ int main(int argc, char **argv){
 	char response_buf[MAXLINE];
 	char client_username[FD_SETSIZE][1+SIZE_ATTR_USERNAME] ;
 
+
 	if(argc == 4){
 		listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 		bzero(&servaddr, sizeof(servaddr));
@@ -42,7 +44,10 @@ int main(int argc, char **argv){
 		if(port < 1024){ err_quit("%d is too small, Please assign a larger port number", port) ; 
 		}else{ servaddr.sin_port = htons(port);} 
 		max_number_of_clients = strtol(argv[3], NULL, 0) ;
-		if(max_number_of_clients <= 0){ err_quit("Max number of clients should be a positive integer.") ;}
+		if(max_number_of_clients <= 0){ err_quit("Max number of clients should be a positive integer.") ;
+		}else{
+			hcreate(max_number_of_clients) ;
+		}
 	}else{
 		err_quit("Usage: ./server server_ip server_port max_clients") ;
 	}
@@ -116,61 +121,72 @@ int main(int argc, char **argv){
 					close(sockfd); FD_CLR(sockfd, &allset);
 					if(client_status[i] > 0){ client_count -= 1;}
 					client[i] = -1;	client_status[i] = -1 ;
-					fprintf(stderr, "incomplete read, client %d closed\n", i) ;
+					fprintf(stderr, "Client %d closed\n", i) ;
 				} else{
 					int32_t *int_buf = (int32_t *)buf ;
 					int32_t header = ntohl(int_buf[0]) ;
 					int version =  (int)( (header & 0xff800000) >> 25 ) ,
 					type = (int)( (header & 0x007f0000) >> 16 ) ,
 					length = (int)  (header & 0x0000ffff);
+					int32_t attr = ntohl(int_buf[1] ) ;
+					int attr_type = (attr & 0xffff0000) >> 16 ,
+						attr_length = (attr & 0x0000ffff) ;
+
 					switch(type ){
+
 					case HEADER_JOIN:{
-						int32_t attr = ntohl(int_buf[1] ) ;
-						int attr_type = (attr & 0xffff0000) >> 16 ,
-							attr_length = (attr & 0x0000ffff) ;
-						if( n >= 8 &&  attr_type == ATTR_USERNAME ){
-							
-							if(client_status[i] <= 0) {
-								client_count += 1;
-								client_status[i] = CLIENT_STATUS_JOINED ;
-							}else{
-								fprintf(stderr, "%s has joined\n", client_username) ;
-							}
+
+					if( n >= 9 &&  attr_type == ATTR_USERNAME ){
+						if(client_status[i] <= 0) {
+							ENTRY et={NULL, NULL} , *e;
 							strncpy(client_username[i], (char *)(int_buf+2), attr_length) ;
 							client_username[i][attr_length] = '\0';
-							fprintf(stdout, "%s joined chat\n", client_username );
-							
+							et.key = client_username[i] ;
+							if(NULL == hsearch(et, FIND) ){
+								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
+									err_quit("clients full");
+								}else{
+									client_count += 1;
+									client_status[i] = CLIENT_STATUS_JOINED ;
+								}
+							}else{
+								close(sockfd);FD_CLR(sockfd, &allset);
+								if(client_status[i] > 0){ client_count -= 1;}
+								client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+								fprintf(stdout, "Duplicate username: \
+									%s has joined chat; client %d closed\n",client_username[i],i );
+							}
 						}else{
-							close(sockfd);FD_CLR(sockfd, &allset);
-							if(client_status[i] > 0){ client_count -= 1;}
-							client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
-							fprintf(stderr, "Incomplete JOIN message\n" ) ;
-							fprintf(stderr, "Client %d closed\n", i) ;
-						
+							fprintf(stderr, "Duplicate JOIN message from %s\n", client_username[i]) ;
 						}
+					}else{
+						close(sockfd);FD_CLR(sockfd, &allset);
+						if(client_status[i] > 0){ client_count -= 1;}
+						client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+						fprintf(stderr, "Incomplete JOIN message\n" ) ;
+						fprintf(stderr, "Client %d closed\n", i) ;
+					}
+
 					}
 					break;
 					
 					case HEADER_SEND:{
-						int32_t attr = ntohl(int_buf[1] ) ;
-						int attr_type = (attr & 0xffff0000) >> 16 ,
-							attr_length = (attr & 0x0000ffff) ;
-						if(n >= 9 && attr_type == ATTR_MESSAGE){
-							buf[8+attr_length] = '\0' ;
-							fprintf(stdout, "Reved msg from client %d: %s", i, buf + 8) ;
-						}else{
-							close(sockfd);FD_CLR(sockfd, &allset);
-							if(client_status[i] > 0){ client_count -= 1;}
-							client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
-							fprintf(stderr, "Incomplete SEND message\n" ) ;
-							fprintf(stderr, "client %d closed\n", i) ;
 
-						}
+					if(n >= 9 && attr_type == ATTR_MESSAGE){
+						buf[8+attr_length] = '\0' ;
+						fprintf(stdout, "Reved msg from client %d: %s", i, buf + 8) ;
+					}else{
+						close(sockfd);FD_CLR(sockfd, &allset);
+						if(client_status[i] > 0){ client_count -= 1;}
+						client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+						fprintf(stderr, "Incomplete SEND message\n" ) ;
+						fprintf(stderr, "client %d closed\n", i) ;
+					}
 					
 					}
 					break ;
 
-					case HEADER_FWD:
+					case HEADER_IDLE:
 					break ;
 
 					default:
@@ -178,10 +194,24 @@ int main(int argc, char **argv){
 					break ;
 					}
 				}
-				if (--nready <= 0)
+				if (--nready <= 0){
 					break;				/* no more readable descriptors */
+				}
 			}
 		}
 	}
 }
-
+int msg_ACK(int fd, int maxi, int client_count, int requestor_index, char client_username[][16], int client_status[]){
+	int32_t head, attr_client_count = ATTRIBUTE(ATTR_CLIENT_COUNT, 2);
+	int32_t attrs_username[client_count] ;
+	char usernames[client_count][16] ;
+	int i, ct=0;
+	for(i =0 ;i <= maxi; i++){
+		if(ct == client_count){break;}
+		if(client_status[i] > 0 && i != requestor_index){
+			attrs_username[ct] = htonl( ATTRIBUTE(ATTR_USERNAME, strlen(client_username[i] )) );
+			strcpy(usernames[ct], client_username[i] ) ;
+			ct ++ ;
+		}
+	}
+}

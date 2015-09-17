@@ -3,6 +3,7 @@ cflags=
 localhost=127.0.0.1
 port=9877
 max_number_of_clients=1027
+U=chaofan
 
 all:client server
 
@@ -22,4 +23,4 @@ clean:
 s: server
 	./server $(localhost) $(port) $(max_number_of_clients) 
 c: client
-	./client $(localhost)
+	./client $(U) $(localhost) $(port)

@@ -12,6 +12,7 @@ ssize_t Readline(int fd, void *ptr, size_t maxlen) ;
 
 void str_cli(FILE *fp, int sockfd){
 	char	sendline[MAXLINE], recvline[MAXLINE], MSG_buf[MAXLINE+8];
+	char buf[MAXLINE];
 	fd_set rset;
 	int nready, fpfd = fileno(fp)  ;
 	
@@ -26,8 +27,33 @@ void str_cli(FILE *fp, int sockfd){
 			/*read something from server */
 			if (Readline(sockfd, recvline, MAXLINE) == 0){
 				err_quit("str_cli: server terminated prematurely");
-			}
+			}else{
+
+			int32_t *int_buf = (int32_t *)buf ;
+			int32_t header = ntohl(int_buf[0]) ;
+			int version =  (int)( (header & 0xff800000) >> 25 ) ,
+			type = (int)( (header & 0x007f0000) >> 16 ) ,
+			length = (int)  (header & 0x0000ffff);
+
+			switch(type){
+
+			case HEADER_FWD:{
+			}break;
+	
+			case HEADER_ACK:{
+
+			int32_t attr = ntohl(int_buf[1] ) ;
+			int attr_type = (attr & 0xffff0000) >> 16 ,
+				attr_length = (attr & 0x0000ffff) ;
+			
+			}break ;
+
+			default:
 			fputs(recvline, stdout);
+			break ;
+
+			}
+			}
 		}
 	
 		if(FD_ISSET(fpfd, &rset) ){

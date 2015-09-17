@@ -6,6 +6,7 @@
 #include	<stdio.h>
 #include	<stdlib.h>
 #include	<string.h>
+#include	<search.h>
 
 int		daemon_proc;		/* set nonzero by daemon_init() */
 
@@ -36,6 +37,7 @@ err_sys(const char *fmt, ...)
 	va_start(ap, fmt);
 	err_doit(1, LOG_ERR, fmt, ap);
 	va_end(ap);
+	hdestroy();
 	exit(1);
 }
 
@@ -50,6 +52,7 @@ err_dump(const char *fmt, ...)
 	va_start(ap, fmt);
 	err_doit(1, LOG_ERR, fmt, ap);
 	va_end(ap);
+	hdestroy();
 	abort();		/* dump core and terminate */
 	exit(1);		/* shouldn't get here */
 }
@@ -79,6 +82,7 @@ err_quit(const char *fmt, ...)
 	va_start(ap, fmt);
 	err_doit(0, LOG_ERR, fmt, ap);
 	va_end(ap);
+	hdestroy();
 	exit(1);
 }
 
