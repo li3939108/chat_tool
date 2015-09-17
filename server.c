@@ -129,11 +129,17 @@ int main(int argc, char **argv){
 						int attr_type = (attr & 0xffff0000) >> 16 ,
 							attr_length = (attr & 0x0000ffff) ;
 						if( n >= 8 &&  attr_type == ATTR_USERNAME ){
-							client_count += 1;
-							client_status[i] = CLIENT_STATUS_JOINED ;
+							
+							if(client_status[i] <= 0) {
+								client_count += 1;
+								client_status[i] = CLIENT_STATUS_JOINED ;
+							}else{
+								fprintf(stderr, "%s has joined\n", client_username) ;
+							}
 							strncpy(client_username[i], (char *)(int_buf+2), attr_length) ;
 							client_username[i][attr_length] = '\0';
 							fprintf(stdout, "%s joined chat\n", client_username );
+							
 						}else{
 							close(sockfd);FD_CLR(sockfd, &allset);
 							if(client_status[i] > 0){ client_count -= 1;}
@@ -160,6 +166,7 @@ int main(int argc, char **argv){
 							fprintf(stderr, "client %d closed\n", i) ;
 
 						}
+					
 					}
 					break ;
 
