@@ -6,6 +6,11 @@
 #include <netinet/in.h>
 #include <netinet/ip.h> /* superset of previous */
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+extern void str_cli(FILE *fp, int sockfd) ;
+extern void err_quit(const char *fmt, ...);
 
 int main(int argc, char **argv){
 	int sockfd;
@@ -21,9 +26,17 @@ int main(int argc, char **argv){
 	servaddr.sin_port = htons(SERV_PORT);
 	inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
 
-	connect(sockfd, (SA *) &servaddr, sizeof(servaddr));
-
-	str_cli(stdin, sockfd);	 /* do it all */
+	if( 0 == connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) ){
+		char *username = "chaofan" ;
+		int username_len = strlen(username) , i = 0;
+		int32_t join_head[2] = {htonl( (VERSION  << 25) | (HEADER_JOIN << 16) | (4 + username_len)  ) ,
+		htonl( (ATTR_USERNAME << 16 )| username_len ) };
+		send(sockfd, join_head, sizeof join_head, 0) ;
+			
+		str_cli(stdin, sockfd);	 /* do it all */
+	}else{
+		err_quit("connection error") ;
+	}
 
 	exit(0);
 }

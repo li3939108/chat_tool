@@ -2,6 +2,7 @@
 #include "commons.h"
 #include <sys/socket.h>
 #include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netinet/ip.h> /* superset of previous */
@@ -9,23 +10,27 @@
 #include <sys/select.h>
 #include <arpa/inet.h>
 #include <stdint.h>
+#include <stdio.h>
+
+#define NOTDEF
 
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 
+
 int main(int argc, char **argv){
-	int i, maxi, maxfd, listenfd, connfd, sockfd, max_number_of_clients;
-	int nready, client[FD_SETSIZE];
+	int i, maxi, maxfd, listenfd, connfd, sockfd, max_number_of_clients, client_count = 0;
+	int nready, client[FD_SETSIZE], client_status[FD_SETSIZE];
 	ssize_t n;
 	fd_set rset, allset;
-	char buf[MAXLINE];
 	socklen_t clilen;
 	struct sockaddr_in cliaddr, servaddr;
-
-
+	char buf[MAXLINE];
+	char response_buf[MAXLINE];
+	char client_username[FD_SETSIZE][1+SIZE_ATTR_USERNAME] ;
 
 	if(argc == 4){
-		listenfd = socket(AF_INET, SOCK_STREAM, 0);
+		listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 		bzero(&servaddr, sizeof(servaddr));
 		servaddr.sin_family = AF_INET;
 		int return_value = inet_pton(servaddr.sin_family, argv[1], &servaddr.sin_addr), port ; 
@@ -39,7 +44,7 @@ int main(int argc, char **argv){
 		max_number_of_clients = strtol(argv[3], NULL, 0) ;
 		if(max_number_of_clients <= 0){ err_quit("Max number of clients should be a positive integer.") ;}
 	}else{
-		err_quit("./server server_ip server_port max_clients") ;
+		err_quit("Usage: ./server server_ip server_port max_clients") ;
 	}
 
 	bind(listenfd, (SA *) &servaddr, sizeof(servaddr));
@@ -50,31 +55,45 @@ int main(int argc, char **argv){
 	maxi = -1;				/* index into client[] array */
 	for (i = 0; i < FD_SETSIZE; i++){
 		client[i] = -1;		
+		client_status[i] = -1 ;
 	}	/* -1 indicates available entry */
 	FD_ZERO(&allset);
 	FD_SET(listenfd, &allset);
 
 	for ( ; ; ) {
 		rset = allset;		/* structure assignment */
+		printf("before select\n");
 		nready = select(maxfd+1, &rset, NULL, NULL, NULL);
 
 		if (FD_ISSET(listenfd, &rset)) {	/* new client connection */
+			if(client_count == max_number_of_clients){
+				/* max clients */
+				fprintf(stderr, "Number of clients reaches limit\n" );
+				continue ;
+			}
+
 			clilen = sizeof(cliaddr);
 			connfd = accept(listenfd, (SA *) &cliaddr, &clilen);
 #ifdef	NOTDEF
-			printf("new client: %s, port %d\n",
-					inet_ntop(AF_INET, &cliaddr.sin_addr, 4, NULL),
-					ntohs(cliaddr.sin_port));
+			printf("new client port %d\n", ntohs(cliaddr.sin_port));
 #endif
 
-			for (i = 0; i < FD_SETSIZE; i++)
-				if (client[i] < 0) {
+			for (i = 0; i < FD_SETSIZE; i++){
+				if (client_status[i] <= 0) {
+					if( (sockfd = client[i]) > 0) {
+						close(sockfd);
+						FD_CLR(sockfd, &allset);
+						client[i] = -1;
+						client_status[i] = CLIENT_STATUS_OFFLINE ;
+					}
 					client[i] = connfd;	/* save descriptor */
+					client_status[i] = CLIENT_STATUS_CONNECTED ;     /* connected but not joined yet */
 					break;
 				}
-			if (i == FD_SETSIZE)
+			}
+			if (i == FD_SETSIZE  ){
 				err_quit("too many clients");
-
+			}
 			FD_SET(connfd, &allset);	/* add new descriptor to set */
 			if (connfd > maxfd)
 				maxfd = connfd;			/* for select */
@@ -86,20 +105,61 @@ int main(int argc, char **argv){
 		}
 
 		for (i = 0; i <= maxi; i++) {	/* check all clients for data */
-			if ( (sockfd = client[i]) < 0)
-				continue;
+			if ( (sockfd = client[i]) < 0){
+				continue;}
 			if (FD_ISSET(sockfd, &rset)) {
-				if ( (n = read(sockfd, buf, MAXLINE)) == 0) {
+				if ( (n = read(sockfd, buf, MAXLINE)) < 4) {
 					/*4connection closed by client */
-					close(sockfd);
-					FD_CLR(sockfd, &allset);
-					client[i] = -1;
-				} else
-					Writen(sockfd, buf, n);
+					/* client exits */
+					close(sockfd); FD_CLR(sockfd, &allset);
+					if(client_status[i] > 0){ client_count -= 1;}
+					client[i] = -1;	client_status[i] = -1 ;
+				} else{
+/*
+					int32_t *int_buf = (int32_t *)buf ;
+					int32_t header = ntohl(int_buf[0]) ;
+					int version =  (int)( (header & 0xff800000) >> 25 ) ,
+					type = (int)( (header & 0x007f0000) >> 16 ) ,
+					length = (int)  (header & 0x0000ffff);
+					switch(type ){
+					case HEADER_JOIN:{
+						int32_t attr = ntohl(int_buf[1] ) ;
+						int attr_type = (attr & 0xffff0000) >> 16 ,
+						attr_length = (attr & 0x0000ffff) ;
+						if( n >= 8 &&  attr_type == ATTR_USERNAME ){
+							fprintf(stdout, "someone joined chat\n" );
+							client_count += 1;
+							client_status[i] = CLIENT_STATUS_JOINED ;
+							strncpy(client_username[i], (char *)(int_buf+2), attr_length) ;
+							client_username[i][attr_length] = '\0';
+						}else{
+							fprintf(stderr, "Incomplete JOIN message\n" ) ;
+							close(sockfd);
+							FD_CLR(sockfd, &allset);
+							client[i] = -1;
+							if(client_status[i] > 0){ client_count -= 1;}
+							client_status[i] = CLIENT_STATUS_OFFLINE ;
+						}
+					}
+					break;
+					
+					case HEADER_SEND:
+					break ;
 
+					case HEADER_FWD:
+					break ;
+
+					default:
+					Writen(sockfd, buf, n);
+					break ;
+					}
+*/
+					Writen(sockfd, buf, n) ;
+				}
 				if (--nready <= 0)
 					break;				/* no more readable descriptors */
 			}
 		}
 	}
 }
+

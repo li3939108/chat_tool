@@ -26,5 +26,10 @@
 #define SIZE_ATTR_CLIENT_COUNT 2
 #define SIZE_ATTR_MESSAGE 512
 
+#define CLIENT_STATUS_OFFLINE -1
+#define CLIENT_STATUS_CONNECTED 0
+#define CLIENT_STATUS_JOINED 1
+#define CLIENT_STATUS_IDLE 2
+
 typedef struct sockaddr SA ;
 #endif

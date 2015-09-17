@@ -1,8 +1,10 @@
 #include "commons.h"
 #include <stdio.h>
+#include <string.h>
 
 extern void Writen(int fd, void *ptr, size_t nbytes);
 extern void err_quit(const char *fmt, ...);
+ssize_t Readline(int fd, void *ptr, size_t maxlen) ;
 
 void str_cli(FILE *fp, int sockfd){
 	char	sendline[MAXLINE], recvline[MAXLINE];
