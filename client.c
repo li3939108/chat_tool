@@ -26,12 +26,16 @@ int main(int argc, char **argv){
 	servaddr.sin_port = htons(SERV_PORT);
 	inet_pton(AF_INET, argv[1], &servaddr.sin_addr);
 
+
 	if( 0 == connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) ){
 		char *username = "chaofan" ;
 		int username_len = strlen(username) , i = 0;
-		int32_t join_head[2] = {htonl( (VERSION  << 25) | (HEADER_JOIN << 16) | (4 + username_len)  ) ,
-		htonl( (ATTR_USERNAME << 16 )| username_len ) };
-		send(sockfd, join_head, sizeof join_head, 0) ;
+		int32_t join_head[2] = {HEADER(HEADER_JOIN, 4+strlen(username)) , 
+			ATTRIBUTE(ATTR_USERNAME, strlen(username))};
+		char JOIN_buf[24];
+		memcpy(JOIN_buf, (char *)join_head, sizeof join_head) ;
+		memcpy(JOIN_buf+8, username, strlen(username) );
+		send(sockfd, JOIN_buf, 8 + strlen(username), 0) ;
 			
 		str_cli(stdin, sockfd);	 /* do it all */
 	}else{
@@ -40,3 +44,4 @@ int main(int argc, char **argv){
 
 	exit(0);
 }
+

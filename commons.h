@@ -2,7 +2,7 @@
 #define __COMMONS_H__
 
 #define SERV_PORT 9877
-#define MAXLINE 1024
+#define MAXLINE 512
 #define LISTENQ 1024
 
 #define VERSION 3
@@ -16,10 +16,14 @@
 #define HEADER_ONLINE 8
 #define HEADER_IDLE 9
 
+#define HEADER(TYPE, LENGTH) htonl( ((VERSION)  << 25) | ((TYPE) << 16) | (LENGTH) )
+
 #define ATTR_REASON 1
 #define ATTR_USERNAME 2
 #define ATTR_CLIENT_COUNT 3
 #define ATTR_MESSAGE 4
+
+#define ATTRIBUTE(TYPE, LENGTH) htonl( ((TYPE) << 16 )| (LENGTH) )
 
 #define SIZE_ATTR_REASON 32
 #define SIZE_ATTR_USERNAME 16

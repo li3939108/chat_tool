@@ -95,13 +95,15 @@ int main(int argc, char **argv){
 				err_quit("too many clients");
 			}
 			FD_SET(connfd, &allset);	/* add new descriptor to set */
-			if (connfd > maxfd)
+			if (connfd > maxfd){
 				maxfd = connfd;			/* for select */
-			if (i > maxi)
+			}
+			if (i > maxi){
 				maxi = i;				/* max index in client[] array */
-
-			if (--nready <= 0)
+			}
+			if (--nready <= 0){
 				continue;				/* no more readable descriptors */
+			}
 		}
 
 		for (i = 0; i <= maxi; i++) {	/* check all clients for data */
@@ -114,7 +116,7 @@ int main(int argc, char **argv){
 					close(sockfd); FD_CLR(sockfd, &allset);
 					if(client_status[i] > 0){ client_count -= 1;}
 					client[i] = -1;	client_status[i] = -1 ;
-					fprintf(stderr, "incomplete read, client %d closed\n", sockfd) ;
+					fprintf(stderr, "incomplete read, client %d closed\n", i) ;
 				} else{
 					int32_t *int_buf = (int32_t *)buf ;
 					int32_t header = ntohl(int_buf[0]) ;
@@ -125,26 +127,40 @@ int main(int argc, char **argv){
 					case HEADER_JOIN:{
 						int32_t attr = ntohl(int_buf[1] ) ;
 						int attr_type = (attr & 0xffff0000) >> 16 ,
-						attr_length = (attr & 0x0000ffff) ;
+							attr_length = (attr & 0x0000ffff) ;
 						if( n >= 8 &&  attr_type == ATTR_USERNAME ){
-							fprintf(stdout, "someone joined chat\n" );
 							client_count += 1;
 							client_status[i] = CLIENT_STATUS_JOINED ;
 							strncpy(client_username[i], (char *)(int_buf+2), attr_length) ;
 							client_username[i][attr_length] = '\0';
+							fprintf(stdout, "%s joined chat\n", client_username );
 						}else{
-							fprintf(stderr, "Incomplete JOIN message\n" ) ;
-							close(sockfd);
-							FD_CLR(sockfd, &allset);
-							client[i] = -1;
+							close(sockfd);FD_CLR(sockfd, &allset);
 							if(client_status[i] > 0){ client_count -= 1;}
-							client_status[i] = CLIENT_STATUS_OFFLINE ;
-							fprintf(stderr, "incomplete read, client %d closed\n", sockfd) ;
+							client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+							fprintf(stderr, "Incomplete JOIN message\n" ) ;
+							fprintf(stderr, "Client %d closed\n", i) ;
+						
 						}
 					}
 					break;
 					
-					case HEADER_SEND:
+					case HEADER_SEND:{
+						int32_t attr = ntohl(int_buf[1] ) ;
+						int attr_type = (attr & 0xffff0000) >> 16 ,
+							attr_length = (attr & 0x0000ffff) ;
+						if(n >= 9 && attr_type == ATTR_MESSAGE){
+							buf[8+attr_length] = '\0' ;
+							fprintf(stdout, "Reved msg from client %d: %s", i, buf + 8) ;
+						}else{
+							close(sockfd);FD_CLR(sockfd, &allset);
+							if(client_status[i] > 0){ client_count -= 1;}
+							client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+							fprintf(stderr, "Incomplete SEND message\n" ) ;
+							fprintf(stderr, "client %d closed\n", i) ;
+
+						}
+					}
 					break ;
 
 					case HEADER_FWD:
