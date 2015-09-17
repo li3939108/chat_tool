@@ -151,7 +151,6 @@ int main(int argc, char **argv){
 					Writen(sockfd, buf, n);
 					break ;
 					}
-					//Writen(sockfd, buf, n) ;
 				}
 				if (--nready <= 0)
 					break;				/* no more readable descriptors */
