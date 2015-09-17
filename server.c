@@ -62,7 +62,6 @@ int main(int argc, char **argv){
 
 	for ( ; ; ) {
 		rset = allset;		/* structure assignment */
-		printf("before select\n");
 		nready = select(maxfd+1, &rset, NULL, NULL, NULL);
 
 		if (FD_ISSET(listenfd, &rset)) {	/* new client connection */
@@ -115,7 +114,6 @@ int main(int argc, char **argv){
 					if(client_status[i] > 0){ client_count -= 1;}
 					client[i] = -1;	client_status[i] = -1 ;
 				} else{
-/*
 					int32_t *int_buf = (int32_t *)buf ;
 					int32_t header = ntohl(int_buf[0]) ;
 					int version =  (int)( (header & 0xff800000) >> 25 ) ,
@@ -153,8 +151,7 @@ int main(int argc, char **argv){
 					Writen(sockfd, buf, n);
 					break ;
 					}
-*/
-					Writen(sockfd, buf, n) ;
+					//Writen(sockfd, buf, n) ;
 				}
 				if (--nready <= 0)
 					break;				/* no more readable descriptors */
