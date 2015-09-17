@@ -19,6 +19,41 @@ extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
 
+int msg_ACK(
+		int fd, 
+		int maxi, 
+		int client_count, 
+		int requestor_index, 
+		char client_username[][SIZE_ATTR_USERNAME + 1], 
+		int client_status[]){
+	int32_t head, attr_client_count = ( ATTRIBUTE(ATTR_CLIENT_COUNT, 2)) ;
+	int32_t attrs_username[client_count] ;
+	char usernames[client_count][16] ;
+	int i, ct=0, position ;
+	short network_client_count = htons( (short) client_count) ;
+	for(i =0 ;i <= maxi; i++){
+		if(ct == client_count){break;}
+		if(client_status[i] > 0 && i != requestor_index){
+			attrs_username[ct] = ( ATTRIBUTE(ATTR_USERNAME, strlen(client_username[i] )) );
+			strcpy(usernames[ct], client_username[i] ) ;
+			ct ++ ;
+		}
+	}
+	
+	memcpy(wbuf+4, &attr_client_count, 4) ;
+	memcpy(wbuf+8, &network_client_count, 2) ;
+	position = 10 ;
+	for(i = 0; i < ct;i++){
+		memcpy(wbuf+position, attrs_username+ct, 4);
+		position += 4; 
+		memcpy(wbuf+position, usernames[ct], strlen(usernames[ct] ) ) ;
+		position += strlen(usernames[ct] ) ;
+	}
+	head = ( HEADER( HEADER_ACK, position - 4) ) ;
+	memcpy(wbuf, &head, 4) ;
+	fprintf(stderr, "%d bytes sent\n", position); 
+	return send(fd, wbuf, position, 0) ;
+}
 
 int main(int argc, char **argv){
 	int i, maxi, maxfd, listenfd, connfd, sockfd, max_number_of_clients, client_count = 0;
@@ -148,6 +183,8 @@ int main(int argc, char **argv){
 								}else{
 									client_count += 1;
 									client_status[i] = CLIENT_STATUS_JOINED ;
+									fprintf(stdout, "Client %d JOIN\n", i) ;
+									msg_ACK(sockfd, maxi, client_count, i, client_username, client_status) ;
 								}
 							}else{
 								close(sockfd);FD_CLR(sockfd, &allset);
@@ -200,32 +237,4 @@ int main(int argc, char **argv){
 			}
 		}
 	}
-}
-int msg_ACK(int fd, int maxi, int client_count, int requestor_index, char client_username[][16], int client_status[]){
-	int32_t head, attr_client_count = htonl( ATTRIBUTE(ATTR_CLIENT_COUNT, 2)) ;
-	int32_t attrs_username[client_count] ;
-	char usernames[client_count][16] ;
-	int i, ct=0, position ;
-	short network_client_count = htons( (short) client_count) ;
-	for(i =0 ;i <= maxi; i++){
-		if(ct == client_count){break;}
-		if(client_status[i] > 0 && i != requestor_index){
-			attrs_username[ct] = htonl( ATTRIBUTE(ATTR_USERNAME, strlen(client_username[i] )) );
-			strcpy(usernames[ct], client_username[i] ) ;
-			ct ++ ;
-		}
-	}
-	
-	memcpy(wbuf+4, &attr_client_count, 4) ;
-	memcpy(wbuf+8, &network_client_count, 2) ;
-	position = 10 ;
-	for(i = 0; i < ct;i++){
-		memcpy(wbuf+position, attrs_username+ct, 4);
-		position += 4; 
-		memcpy(wbuf+position, usernames[ct], strlen(usernames[ct] ) ) ;
-		position += strlen(usernames[ct] ) ;
-	}
-	head = htonl( HEADER( HEADER_ACK, position - 4) ) ;
-	memcpy(wbuf, &head, 4) ;
-	return send(fd, wbuf, position, 0) ;
 }
