@@ -84,6 +84,7 @@ int main(int argc, char **argv){
 						FD_CLR(sockfd, &allset);
 						client[i] = -1;
 						client_status[i] = CLIENT_STATUS_OFFLINE ;
+						fprintf(stderr, "client didn't JOIN, %d closed\n", sockfd) ;
 					}
 					client[i] = connfd;	/* save descriptor */
 					client_status[i] = CLIENT_STATUS_CONNECTED ;     /* connected but not joined yet */
@@ -113,6 +114,7 @@ int main(int argc, char **argv){
 					close(sockfd); FD_CLR(sockfd, &allset);
 					if(client_status[i] > 0){ client_count -= 1;}
 					client[i] = -1;	client_status[i] = -1 ;
+					fprintf(stderr, "incomplete read, client %d closed\n", sockfd) ;
 				} else{
 					int32_t *int_buf = (int32_t *)buf ;
 					int32_t header = ntohl(int_buf[0]) ;
@@ -137,6 +139,7 @@ int main(int argc, char **argv){
 							client[i] = -1;
 							if(client_status[i] > 0){ client_count -= 1;}
 							client_status[i] = CLIENT_STATUS_OFFLINE ;
+							fprintf(stderr, "incomplete read, client %d closed\n", sockfd) ;
 						}
 					}
 					break;
