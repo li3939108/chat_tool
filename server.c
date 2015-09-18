@@ -18,6 +18,33 @@
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
+void msg_FWD(
+		int maxi,
+		int client_count, 
+		int sender_index,
+		char client_username[][SIZE_ATTR_USERNAME + 1],
+		int client[],
+		int client_status[],
+		char msgbuf[]){
+	
+	int32_t head = HEADER(HEADER_FWD, 4+strlen(msgbuf) +4+strlen( client_username[sender_index] ) ) ;
+	int32_t attr_msg =  ATTRIBUTE(ATTR_MESSAGE, strlen(msgbuf) ) ;
+	int32_t attr_username = ATTRIBUTE(ATTR_USERNAME, strlen( client_username[sender_index] ) ) ;
+	int position = 0, i = 0;
+	memcpy(wbuf + position, &head, 4) ;position += 4;
+	memcpy(wbuf+position, &attr_msg, 4);position += 4;
+	memcpy(wbuf+position, msgbuf, strlen(msgbuf) );position += strlen(msgbuf) ;
+	memcpy(wbuf+position, &attr_username, 4 ); position += 4; 
+	memcpy(wbuf+position, client_username[sender_index], strlen(client_username[sender_index] ) ) ;
+	position += strlen(client_username[sender_index] ) ;
+	for(i = 0;i<=maxi; i++){
+		if( i != sender_index && client_status[i] > 0){
+			if(0 == send(client[i], wbuf, position, 0) ){
+				fprintf(stderr, "Error sending msg %s to client %d\n", msgbuf, i) ;
+			}
+		}
+	}
+}
 
 int msg_ACK(
 		int fd, 
@@ -212,6 +239,7 @@ int main(int argc, char **argv){
 					if(n >= 9 && first_attr_type == ATTR_MESSAGE){
 						buf[8+first_attr_length] = '\0' ;
 						fprintf(stdout, "Reved msg from client %d: %s", i, buf + 8) ;
+						msg_FWD(maxi, client_count, i, client_username, client, client_status, buf + 8) ;
 					}else{
 						close(sockfd);FD_CLR(sockfd, &allset);
 						if(client_status[i] > 0){ client_count -= 1;}

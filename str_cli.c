@@ -58,10 +58,30 @@ void str_cli(FILE *fp, int sockfd){
 			fprintf(stderr, "  ACK recv\n");
 			if(n >= 10 && first_attr_type == ATTR_CLIENT_COUNT){
 				int16_t  client_count = ntohs(  *(int16_t *)(int_buf + 2) ) ;
-				fprintf(stdout, "client_count: %d\n",client_count);
-			}else{
-
+				int i = 0, position = 10;
+				if( client_count > 1){
+					fprintf(stdout, "Talk with %d people:\n", client_count - 1) ;
+				}else{
+					fprintf(stdout, "No one else is online\n") ;
+				}
+				for(i = 1; i < client_count ; i++){
+					int32_t attr = ntohl( *(int32_t*)(recvline + position) ) ;
+					int attr_type = (attr & 0xffff0000) >> 16 ,
+						attr_length = (attr & 0x0000ffff) ;
+					if(n >= position + 4 && attr_type == ATTR_USERNAME){
+						char username[SIZE_ATTR_USERNAME + 1] ;
+						position += 4;
+						strncpy(username, recvline + position, attr_length) ;
+						fputs( username, stdout) ;
+						position += attr_length ;
+					}else{ 
+						fprintf(stderr, "Incomplete ACK\n") ;
+						break ;
+					}
+				}
 			}
+			
+
 			}break ;
 
 			default:
