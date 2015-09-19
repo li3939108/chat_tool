@@ -19,6 +19,16 @@ extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 extern void err_msg(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
+ENTRY *nullify_key(const char *key){
+	ENTRY et={key, NULL}, *er ;
+	er = hsearch(et, FIND) ;
+	if(er == NULL ){return NULL;
+	}else{
+		er->data = NULL ;
+		return er ;
+	}
+}
+
 void msg_NAK(
 		int index,
 		int client[], 
@@ -241,7 +251,7 @@ int main(int argc, char **argv){
 							ENTRY et={NULL, NULL} , *e;
 							strncpy(client_username[i], (char *)(int_buf+2), first_attr_length) ;
 							client_username[i][first_attr_length] = '\0'; et.key = client_username[i] ;
-							if(NULL == hsearch(et, FIND) ){
+							if(NULL == hsearch(et, FIND) || et->data == NULL){
 								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
 									msg_NAK(i, client, "Clients full") ;
 									err_msg("clients full");
