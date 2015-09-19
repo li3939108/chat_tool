@@ -20,7 +20,7 @@ extern void err_quit(const char *fmt, ...);
 extern void err_msg(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
 ENTRY *nullify_key(const char *key){
-	ENTRY et={key, NULL}, *er ;
+	ENTRY et={(char *)key, NULL}, *er ;
 	er = hsearch(et, FIND) ;
 	if(er == NULL ){return NULL;
 	}else{
@@ -198,7 +198,7 @@ int main(int argc, char **argv){
 						FD_CLR(sockfd, &allset);
 						client[i] = -1;
 						client_status[i] = CLIENT_STATUS_OFFLINE ;
-						fprintf(stderr, "client didn't JOIN, %d closed\n", sockfd) ;
+						fprintf(stderr, "socket client didn't JOIN, %d closed\n", sockfd) ;
 					}
 					client[i] = connfd;	/* save descriptor */
 					client_status[i] = CLIENT_STATUS_CONNECTED ;     /* connected but not joined yet */
@@ -228,7 +228,7 @@ int main(int argc, char **argv){
 					/*4connection closed by client */
 					/* client exits */
 					close(sockfd); FD_CLR(sockfd, &allset);
-					if(client_status[i] > 0){ client_count -= 1;}
+					if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
 					client[i] = -1;	client_status[i] = CLIENT_STATUS_OFFLINE ;
 					msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_OFFLINE) ;
 					fprintf(stderr, "Client %d closed\n", i) ;
@@ -248,10 +248,10 @@ int main(int argc, char **argv){
 
 					if( n >= 9 &&  first_attr_type == ATTR_USERNAME ){
 						if(client_status[i] <= 0) {
-							ENTRY et={NULL, NULL} , *e;
+							ENTRY et={NULL, (void *)-1} , *er;
 							strncpy(client_username[i], (char *)(int_buf+2), first_attr_length) ;
 							client_username[i][first_attr_length] = '\0'; et.key = client_username[i] ;
-							if(NULL == hsearch(et, FIND) || et->data == NULL){
+							if(NULL == (er = hsearch(et, FIND) ) || er->data == NULL){
 								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
 									msg_NAK(i, client, "Clients full") ;
 									err_msg("clients full");
@@ -264,7 +264,7 @@ int main(int argc, char **argv){
 								}
 							}else{
 								close(sockfd);FD_CLR(sockfd, &allset);
-								if(client_status[i] > 0){ client_count -= 1;}
+								if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
 								client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
 								msg_NAK(i, client, "Duplicate username") ;
 								fprintf(stdout, "Duplicate username: \
@@ -275,7 +275,7 @@ int main(int argc, char **argv){
 						}
 					}else{
 						close(sockfd);FD_CLR(sockfd, &allset);
-						if(client_status[i] > 0){ client_count -= 1;}
+						if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
 						client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
 						fprintf(stderr, "Incomplete JOIN message\n" ) ;
 						fprintf(stderr, "Client %d closed\n", i) ;
@@ -292,7 +292,7 @@ int main(int argc, char **argv){
 						msg_FWD(maxi, client_count, i, client_username, client, client_status, buf + 8) ;
 					}else{
 						close(sockfd);FD_CLR(sockfd, &allset);
-						if(client_status[i] > 0){ client_count -= 1;}
+						if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
 						client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
 						fprintf(stderr, "Incomplete SEND message\n" ) ;
 						fprintf(stderr, "client %d closed\n", i) ;
