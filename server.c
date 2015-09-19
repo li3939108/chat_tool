@@ -18,34 +18,57 @@
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
+void msg_ON_OFF_LINE(
+		int maxi,
+		int client_count, 
+		int index,
+		char client_username[][SIZE_ATTR_USERNAME + 1],
+		int client[],
+		int client_status[],
+		int HEADER_ON_OFF_LINE){
+	int32_t head = HEADER(HEADER_ON_OFF_LINE,  4+strlen( client_username[index] ) ) ;
+	int32_t attr_username = ATTRIBUTE(ATTR_USERNAME, strlen( client_username[index] ) ) ;
+	int position = 0, i = 0;
+	memcpy(wbuf + position, &head, 4) ;position += 4;
+	memcpy(wbuf+position, &attr_username, 4 ); position += 4; 
+	memcpy(wbuf+position, client_username[index], strlen(client_username[index] ) ) ;
+	position += strlen(client_username[index] ) ;
+	
+	for(i = 0;i<=maxi; i++){
+		if( i != index && client_status[i] > 0){
+			if(0 == send(client[i], wbuf, position, 0) ){
+				fprintf(stderr, "Error sending to client %d\n", i) ;
+			}
+		}
+	}
+}
 void msg_FWD(
 		int maxi,
 		int client_count, 
-		int sender_index,
+		int index,
 		char client_username[][SIZE_ATTR_USERNAME + 1],
 		int client[],
 		int client_status[],
 		char msgbuf[]){
 	
-	int32_t head = HEADER(HEADER_FWD, 4+strlen(msgbuf) +4+strlen( client_username[sender_index] ) ) ;
+	int32_t head = HEADER(HEADER_FWD, 4+strlen(msgbuf) +4+strlen( client_username[index] ) ) ;
 	int32_t attr_msg =  ATTRIBUTE(ATTR_MESSAGE, strlen(msgbuf) ) ;
-	int32_t attr_username = ATTRIBUTE(ATTR_USERNAME, strlen( client_username[sender_index] ) ) ;
+	int32_t attr_username = ATTRIBUTE(ATTR_USERNAME, strlen( client_username[index] ) ) ;
 	int position = 0, i = 0;
 	memcpy(wbuf + position, &head, 4) ;position += 4;
 	memcpy(wbuf+position, &attr_msg, 4);position += 4;
 	memcpy(wbuf+position, msgbuf, strlen(msgbuf) );position += strlen(msgbuf) ;
 	memcpy(wbuf+position, &attr_username, 4 ); position += 4; 
-	memcpy(wbuf+position, client_username[sender_index], strlen(client_username[sender_index] ) ) ;
-	position += strlen(client_username[sender_index] ) ;
+	memcpy(wbuf+position, client_username[index], strlen(client_username[index] ) ) ;
+	position += strlen(client_username[index] ) ;
 	for(i = 0;i<=maxi; i++){
-		if( i != sender_index && client_status[i] > 0){
+		if( i != index && client_status[i] > 0){
 			if(0 == send(client[i], wbuf, position, 0) ){
 				fprintf(stderr, "Error sending msg %s to client %d\n", msgbuf, i) ;
 			}
 		}
 	}
 }
-
 int msg_ACK(
 		int fd, 
 		int maxi, 
@@ -182,7 +205,8 @@ int main(int argc, char **argv){
 					/* client exits */
 					close(sockfd); FD_CLR(sockfd, &allset);
 					if(client_status[i] > 0){ client_count -= 1;}
-					client[i] = -1;	client_status[i] = -1 ;
+					client[i] = -1;	client_status[i] = CLIENT_STATUS_OFFLINE ;
+					msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_OFFLINE) ;
 					fprintf(stderr, "Client %d closed\n", i) ;
 				} else{
 					int32_t *int_buf = (int32_t *)buf ;
@@ -202,14 +226,14 @@ int main(int argc, char **argv){
 						if(client_status[i] <= 0) {
 							ENTRY et={NULL, NULL} , *e;
 							strncpy(client_username[i], (char *)(int_buf+2), first_attr_length) ;
-							client_username[i][first_attr_length] = '\0';
-							et.key = client_username[i] ;
+							client_username[i][first_attr_length] = '\0'; et.key = client_username[i] ;
 							if(NULL == hsearch(et, FIND) ){
 								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
 									err_quit("clients full");
 								}else{
 									client_count += 1;
 									client_status[i] = CLIENT_STATUS_JOINED ;
+									msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_ONLINE) ;
 									fprintf(stdout, "Client %d JOIN\n", i) ;
 									msg_ACK(sockfd, maxi, client_count, i, client_username, client_status) ;
 								}

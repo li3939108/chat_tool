@@ -48,6 +48,28 @@ void str_cli(FILE *fp, int sockfd){
 
 			switch(type){
 
+			case HEADER_OFFLINE:
+			case HEADER_ONLINE:{
+
+			if(n >= 9 && first_attr_type == ATTR_USERNAME){
+				int i = 0, position = 8 ;
+				char username[SIZE_ATTR_USERNAME + 1] ;
+				memcpy(username, recvline + position, first_attr_length) ;
+				username[first_attr_length] = '\0' ;
+				if(type == HEADER_ONLINE){
+					fprintf( stdout, "\e[1;32m%s\e[0m is ONLINE\n", username) ;
+				}else if(type == HEADER_OFFLINE){
+					fprintf( stdout, "\e[0;31m%s\e[0m is OFFLINE\n", username) ;
+				}
+				position += first_attr_length ;
+			}else{ 
+				fprintf(stderr, "Incomplete OFFLINE or ONLINE\n") ;
+				break ;
+			}
+
+			}
+			break;
+
 			case HEADER_FWD:{
 			
 			if(n >= 9 && first_attr_type == ATTR_MESSAGE){
@@ -67,7 +89,7 @@ void str_cli(FILE *fp, int sockfd){
 					position += 4;
 					memcpy(username, recvline + position, attr_length) ;
 					username[attr_length] = '\0' ;
-					fprintf( stdout, "\e[1;32m%s\e[0m: %s", username, msg) ;
+					fprintf( stdout, "\e[1;97m%s\e[0m: %s", username, msg) ;
 					position += attr_length ;
 				}
 			}
@@ -93,7 +115,7 @@ void str_cli(FILE *fp, int sockfd){
 						position += 4;
 						memcpy(username, recvline + position, attr_length) ;
 						username[attr_length] = '\0' ;
-						fprintf( stdout, "\e[1;32m%s\e[0m\n", username) ;
+						fprintf( stdout, "\e[0;97m%s\e[0m\n", username) ;
 						position += attr_length ;
 					}else{ 
 						fprintf(stderr, "Incomplete ACK\n") ;
