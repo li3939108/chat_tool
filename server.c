@@ -17,7 +17,21 @@
 
 extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
+extern void err_msg(const char *fmt, ...);
 char buf[MAXLINE], wbuf[MAXLINE];
+void msg_NAK(
+		int index,
+		int client[], 
+		char reason[]){
+	int32_t head = HEADER(HEADER_NAK,  4+strlen( reason ) ) ;
+	int32_t attr = ATTRIBUTE(ATTR_REASON, strlen(reason)) ;
+	memcpy(wbuf, &head, 4) ;memcpy(wbuf+4, &attr, 4) ;
+	memcpy(wbuf+8, reason, strlen(reason) ) ;
+	if(0 == send(client[index], wbuf, 8+strlen(reason), 0) ){
+		fprintf(stderr, "Error sending to client %d\n", index) ;
+	}
+	
+}
 void msg_ON_OFF_LINE(
 		int maxi,
 		int client_count, 
@@ -229,7 +243,8 @@ int main(int argc, char **argv){
 							client_username[i][first_attr_length] = '\0'; et.key = client_username[i] ;
 							if(NULL == hsearch(et, FIND) ){
 								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
-									err_quit("clients full");
+									msg_NAK(i, client, "Clients full") ;
+									err_msg("clients full");
 								}else{
 									client_count += 1;
 									client_status[i] = CLIENT_STATUS_JOINED ;
@@ -241,6 +256,7 @@ int main(int argc, char **argv){
 								close(sockfd);FD_CLR(sockfd, &allset);
 								if(client_status[i] > 0){ client_count -= 1;}
 								client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
+								msg_NAK(i, client, "Duplicate username") ;
 								fprintf(stdout, "Duplicate username: \
 									%s has joined chat; client %d closed\n",client_username[i],i );
 							}
