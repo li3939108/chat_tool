@@ -16,13 +16,14 @@
 #define HEADER_ONLINE 8
 #define HEADER_IDLE 9
 
-#define HEADER(TYPE, LENGTH) htonl( ((VERSION)  << 25) | ((TYPE) << 16) | (LENGTH) )
 
 #define ATTR_REASON 1
 #define ATTR_USERNAME 2
 #define ATTR_CLIENT_COUNT 3
 #define ATTR_MESSAGE 4
 
+#include <arpa/inet.h>
+#define HEADER(TYPE, LENGTH) htonl( ((VERSION)  << 25) | ((TYPE) << 16) | (LENGTH) )
 #define ATTRIBUTE(TYPE, LENGTH) htonl( ((TYPE) << 16 )| (LENGTH) )
 
 #define SIZE_ATTR_REASON 32
