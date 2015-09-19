@@ -29,7 +29,6 @@ void str_cli(FILE *fp, int sockfd){
 	for(;;){
 		fd_set rrset = rset ;
 		nready = select( maxfd + 1, &rrset, NULL , NULL, NULL);
-		fprintf(stderr,"str_cli: %dready\n", nready);
 		if(FD_ISSET(sockfd, &rrset)){
 			/*read something from server */
 			int n;
@@ -47,15 +46,36 @@ void str_cli(FILE *fp, int sockfd){
 			int first_attr_type = (attr & 0xffff0000) >> 16 ,
 				first_attr_length = (attr & 0x0000ffff) ;
 
-			fprintf(stderr, " Recv %d bytes\n", n);
 			switch(type){
 
 			case HEADER_FWD:{
+			
+			if(n >= 9 && first_attr_type == ATTR_MESSAGE){
+				int i = 0, position = 8;
+				char msg[SIZE_ATTR_MESSAGE + 1] ;
+				char username[SIZE_ATTR_USERNAME + 1] ;
+
+				int32_t attr  ;
+				int attr_type, attr_length ;
+				memcpy(msg, recvline + position, first_attr_length) ;
+				msg[first_attr_length] = '\0';
+				position += first_attr_length ;
+				attr = ntohl( *(int32_t *)(recvline + position) ) ;
+				attr_type = (attr & 0xffff0000) >> 16; 
+				attr_length = (attr & 0x0000ffff) ;
+				if(n >= position + 4 && attr_type == ATTR_USERNAME){
+					position += 4;
+					memcpy(username, recvline + position, attr_length) ;
+					username[attr_length] = '\0' ;
+					fprintf( stdout, "\e[1;32m%s\e[0m: %s", username, msg) ;
+					position += attr_length ;
+				}
+			}
+
 			}break;
 	
 			case HEADER_ACK:{
 			
-			fprintf(stderr, "  ACK recv\n");
 			if(n >= 10 && first_attr_type == ATTR_CLIENT_COUNT){
 				int16_t  client_count = ntohs(  *(int16_t *)(int_buf + 2) ) ;
 				int i = 0, position = 10;
@@ -71,16 +91,17 @@ void str_cli(FILE *fp, int sockfd){
 					if(n >= position + 4 && attr_type == ATTR_USERNAME){
 						char username[SIZE_ATTR_USERNAME + 1] ;
 						position += 4;
-						strncpy(username, recvline + position, attr_length) ;
-						fputs( username, stdout) ;
+						memcpy(username, recvline + position, attr_length) ;
+						username[attr_length] = '\0' ;
+						fprintf( stdout, "\e[1;32m%s\e[0m\n", username) ;
 						position += attr_length ;
 					}else{ 
 						fprintf(stderr, "Incomplete ACK\n") ;
 						break ;
 					}
 				}
+				fprintf(stdout, "Start chattng\n-------------\n");
 			}
-			
 
 			}break ;
 
@@ -98,16 +119,17 @@ void str_cli(FILE *fp, int sockfd){
 			if (fgets(sendline, MAXLINE, fp) != NULL) {
 				int32_t send_head[2] = {HEADER(HEADER_SEND, 4 + strlen(sendline)),
 					ATTRIBUTE(ATTR_MESSAGE, strlen(sendline))}; 
-				fprintf(stderr, "Got something from stdin\n"); 
 				memcpy(MSG_buf, send_head, 8) ;
 				memcpy(MSG_buf+8, sendline, strlen(sendline)) ;
-				Writen(sockfd, MSG_buf, 8+strlen(sendline));
+				send(sockfd, MSG_buf, 8+strlen(sendline), 0);
 			}else{
 				err_quit("Error read from file %d", fpfd ) ;
 			}	
 			if(--nready == 0){continue;}
 		}
-	
+		
+		fflush(stdout);
+		fflush(stderr);
 		
 	}
 

@@ -71,10 +71,10 @@ int msg_ACK(
 	memcpy(wbuf+8, &network_client_count, 2) ;
 	position = 10 ;
 	for(i = 0; i < ct;i++){
-		memcpy(wbuf+position, attrs_username+ct, 4);
+		memcpy(wbuf+position, attrs_username+i, 4);
 		position += 4; 
-		memcpy(wbuf+position, usernames[ct], strlen(usernames[ct] ) ) ;
-		position += strlen(usernames[ct] ) ;
+		memcpy(wbuf+position, usernames[i], strlen(usernames[i] ) ) ;
+		position += strlen(usernames[i] ) ;
 	}
 	head = ( HEADER( HEADER_ACK, position - 4) ) ;
 	memcpy(wbuf, &head, 4) ;
