@@ -6,18 +6,18 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 
 
-extern void Writen(int fd, void *ptr, size_t nbytes);
 extern void err_quit(const char *fmt, ...);
-ssize_t Readline(int fd, void *ptr, size_t maxlen) ;
 
 void str_cli(FILE *fp, int sockfd){
 	char	sendline[MAXLINE], recvline[MAXLINE], MSG_buf[MAXLINE+8];
 	fd_set rset;
 	int nready, fpfd = fileno(fp)  ;
 	int maxfd = (fpfd > sockfd ? fpfd : sockfd);
+	struct timeval tv = {10, 0};
 
 	
 	

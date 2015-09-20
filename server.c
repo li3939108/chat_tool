@@ -15,7 +15,6 @@
 
 #define NOTDEF
 
-extern void Writen(int fd, void *ptr, size_t n) ;
 extern void err_quit(const char *fmt, ...);
 extern void err_msg(const char *fmt, ...);
 
@@ -84,8 +83,7 @@ int main(int argc, char **argv){
 		if (FD_ISSET(listenfd, &rset)) {	/* new client connection */
 			if(client_count == max_number_of_clients){
 				/* max clients */
-				fprintf(stderr, "Number of clients reaches limit\n" );
-				continue ;
+				goto check_for_data ;
 			}
 
 			clilen = sizeof(cliaddr);
@@ -122,7 +120,7 @@ int main(int argc, char **argv){
 				continue;				/* no more readable descriptors */
 			}
 		}
-
+check_for_data:
 		for (i = 0; i <= maxi; i++) {	/* check all clients for data */
 			if ( (sockfd = client[i]) < 0){
 				continue;}
@@ -208,7 +206,7 @@ int main(int argc, char **argv){
 					break ;
 
 					default:
-					Writen(sockfd, buf, n);
+					write(sockfd, buf, n);
 					break ;
 					}
 				}

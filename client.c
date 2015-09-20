@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "msg.h"
+
 extern void str_cli(FILE *fp, int sockfd) ;
 extern void err_quit(const char *fmt, ...);
 
@@ -38,14 +40,7 @@ int main(int argc, char **argv){
 
 
 	if( 0 == connect(sockfd, (SA *) &servaddr, sizeof(servaddr)) ){
-		int username_len = strlen(username) , i = 0;
-		int32_t join_head[2] = {HEADER(HEADER_JOIN, 4+strlen(username)) , 
-			ATTRIBUTE(ATTR_USERNAME, strlen(username))};
-		char JOIN_buf[24];
-		memcpy(JOIN_buf, (char *)join_head, sizeof join_head) ;
-		memcpy(JOIN_buf+8, username, strlen(username) );
-		send(sockfd, JOIN_buf, 8 + strlen(username), 0) ;
-			
+		msg_JOIN(username, sockfd);
 		str_cli(stdin, sockfd);	 /* do it all */
 	}else{
 		err_quit("connection error") ;

@@ -3,7 +3,7 @@
 
 
 #include "commons.h"
-
+extern void msg_JOIN(char username[SIZE_ATTR_USERNAME+1], int sockfd);
 extern void msg_NAK(	int index,int client[], char reason[]);
 extern void msg_ON_OFF_LINE(
 		int maxi,
