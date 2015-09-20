@@ -57,7 +57,7 @@ int main(int argc, char **argv){
 		max_number_of_clients = strtol(argv[3], NULL, 0) ;
 		if(max_number_of_clients <= 0){ err_quit("Max number of clients should be a positive integer.") ;
 		}else{
-			hcreate(max_number_of_clients) ;
+			hcreate(MAXLINE) ;
 		}
 	}else{
 		err_quit("Usage: ./server server_ip server_port max_clients") ;
@@ -81,10 +81,6 @@ int main(int argc, char **argv){
 		nready = select(maxfd+1, &rset, NULL, NULL, NULL);
 
 		if (FD_ISSET(listenfd, &rset)) {	/* new client connection */
-			if(client_count == max_number_of_clients){
-				/* max clients */
-				goto check_for_data ;
-			}
 
 			clilen = sizeof(cliaddr);
 			connfd = accept(listenfd, (SA *) &cliaddr, &clilen);
@@ -129,9 +125,13 @@ check_for_data:
 					/*4connection closed by client */
 					/* client exits */
 					close(sockfd); FD_CLR(sockfd, &allset);
-					if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
+					if(client_status[i] > 0){ 
+						client_count -= 1;
+						nullify_key(client_username[i]);
+						msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_OFFLINE) ;
+					}
 					client[i] = -1;	client_status[i] = CLIENT_STATUS_OFFLINE ;
-					msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_OFFLINE) ;
+					
 					fprintf(stderr, "Client %d closed\n", i) ;
 				} else{
 					int32_t *int_buf = (int32_t *)buf ;
@@ -153,10 +153,11 @@ check_for_data:
 							strncpy(client_username[i], (char *)(int_buf+2), first_attr_length) ;
 							client_username[i][first_attr_length] = '\0'; et.key = client_username[i] ;
 							if(NULL == (er = hsearch(et, FIND) ) || er->data == NULL){
-								if(client_count == max_number_of_clients||NULL == hsearch(et, ENTER)){
+								if(client_count == max_number_of_clients){
 									msg_NAK(i, client, "Clients full") ;
 									err_msg("clients full");
 								}else{
+									er = hsearch(et, ENTER);er->data = (void*)-1;
 									client_count += 1;
 									client_status[i] = CLIENT_STATUS_JOINED ;
 									msg_ON_OFF_LINE(maxi, client_count, i, client_username, client, client_status, HEADER_ONLINE) ;
@@ -164,10 +165,10 @@ check_for_data:
 									msg_ACK(sockfd, maxi, client_count, i, client_username, client_status) ;
 								}
 							}else{
+								msg_NAK(i, client, "Duplicate username") ;
 								close(sockfd);FD_CLR(sockfd, &allset);
 								if(client_status[i] > 0){ client_count -= 1;nullify_key(client_username[i]);}
 								client[i] = -1;client_status[i] = CLIENT_STATUS_OFFLINE ;
-								msg_NAK(i, client, "Duplicate username") ;
 								fprintf(stdout, "Duplicate username: \
 									%s has joined chat; client %d closed\n",client_username[i],i );
 							}

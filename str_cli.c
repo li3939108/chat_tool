@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 
 
@@ -69,6 +70,23 @@ void str_cli(FILE *fp, int sockfd){
 
 			}
 			break;
+
+			case HEADER_NAK:{
+
+			if(n >= 9 && first_attr_type == ATTR_REASON){
+				int i = 0, position = 8;
+				char reason[SIZE_ATTR_REASON + 1] ;
+				int32_t attr  ;
+				int attr_type, attr_length ;
+				memcpy(reason, recvline + position, first_attr_length) ;
+				reason[first_attr_length] = '\0';
+				position += first_attr_length ;
+				fprintf(stdout, "Cannot connect to server: %s\n", reason) ;
+				shutdown(sockfd, SHUT_RDWR) ;
+				exit(0) ;
+			}
+				
+			}break;
 
 			case HEADER_FWD:{
 			

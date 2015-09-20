@@ -2,7 +2,7 @@ CC=clang
 cflags=
 localhost=127.0.0.1
 port=9877
-max_number_of_clients=1027
+max_number_of_clients=2
 U=chaofan
 
 all:client server
