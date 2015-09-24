@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 cflags=
 localhost=127.0.0.1
 port=9877
