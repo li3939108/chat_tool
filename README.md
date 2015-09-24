@@ -1,4 +1,4 @@
-This is a simple chat software, which includes a server and a client
+This is a simple chat software, which includes a server and a client.
 Usage
 -----------
 To start the server 
@@ -10,4 +10,9 @@ To start the client
 Architecuture
 -----------
 
-The `msg.h` contains the functions to construct the messages sent by server and client 
+The `msg.c` contains the functions to construct the messages sent by server and client, and we have a header file `msg.h` for the function declarations.
+
+The `str_cli.c` contains the functions to respond to messages sent to the client.
+
+The `server.c` contains the functions to respond to connection request from clients and messages sent to the server.
+
