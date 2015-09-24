@@ -6,4 +6,7 @@ To start the server
 To start the client
 ./client username ip port
 
-==Architecutur
+Architecutur
+=========
+
+The `msg.h` contains the functions to construct the messages sent by server and client 
