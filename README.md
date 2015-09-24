@@ -22,5 +22,8 @@ The `msg.c` contains the functions to construct the messages sent by server and 
 The `str_cli.c` contains the functions to respond to messages sent to the client.
 
 The `server.c` contains the functions to respond to connection request from clients and messages sent to the server.
+Bonus feature
+-----------
+We implemented the feature 1, i.e., the new message types ACK, NAK, ONLINE, and OFFLINE. 
 
 
