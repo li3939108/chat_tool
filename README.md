@@ -15,6 +15,7 @@ To start the client
 
 Architecuture
 -----------
+The `commons.h` include the constants used in the project.
 
 The `msg.c` contains the functions to construct the messages sent by server and client, and we have a header file `msg.h` for the function declarations.
 
