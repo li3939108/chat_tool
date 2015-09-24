@@ -11,9 +11,9 @@ msg.o: msg.c
 error.o:error.c
 	$(CC) -o $@ -c $<
 
-client: client.c str_cli.c error.o msg.o
+client: team1_client.c str_cli.c error.o msg.o
 	$(CC) $(cflags) -o $@ $^
-server: server.c error.o msg.o
+server: team1_server.c error.o msg.o
 	$(CC) $(cflags) -o $@ $^
 clean:
 	rm client server *.o
